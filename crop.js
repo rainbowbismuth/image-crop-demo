@@ -44,43 +44,62 @@ function euphoria(img) {
     return div;
 }
 var MAX_DISTANCE = 441;
-function new_histogram() {
-    return new Uint32Array(MAX_DISTANCE);
-}
-function reset_histogram(histo) {
-    for (var i = 0; i < MAX_DISTANCE; i++) {
-        histo[i] = 0;
+var ColorDistHistogram = (function () {
+    function ColorDistHistogram() {
+        this.arr = new Uint32Array(MAX_DISTANCE);
     }
-}
-function calculate_histogram(histo, img_data, x, y, width, height) {
-    var data = img_data.data;
-    var index = (function () {
-        var row_length = img_data.width;
-        return function (i, j) {
-            return (i + j * row_length) * 4;
-        };
-    })();
-    var last_x = x + width - 1;
-    var last_y = y + height - 1;
-    for (; y < last_y; y++) {
-        for (; x < last_x; x++) {
-            var here = index(x, y);
-            var r1 = data[here + 0];
-            var g1 = data[here + 1];
-            var b1 = data[here + 2];
-            var here = index(x + 1, y);
-            var r2 = data[here + 0];
-            var g2 = data[here + 1];
-            var b2 = data[here + 2];
-            var r_squared = (r1 - r2) * (r1 - r2);
-            var g_squared = (g1 - g2) * (g1 - g2);
-            var b_squared = (b1 - b2) * (b1 - b2);
-            var dist = Math.sqrt(r_squared + g_squared + b_squared) | 0;
-            histo[dist] += 1;
+    ColorDistHistogram.prototype.reset = function () {
+        var arr = this.arr;
+        for (var i = 0; i < MAX_DISTANCE; i++) {
+            arr[i] = 0;
         }
-    }
-    return histo;
-}
+    };
+    ColorDistHistogram.prototype.calculate = function (img_data, x, y, width, height) {
+        var data = img_data.data;
+        var arr = this.arr;
+        var index = (function () {
+            var row_length = img_data.width;
+            return function (i, j) {
+                return (i + j * row_length) * 4;
+            };
+        })();
+        var last_x = x + width - 1;
+        var last_y = y + height - 1;
+        for (; y < last_y; y++) {
+            for (; x < last_x; x++) {
+                var here = index(x, y);
+                var r1 = data[here + 0];
+                var g1 = data[here + 1];
+                var b1 = data[here + 2];
+                var here = index(x + 1, y);
+                var r2 = data[here + 0];
+                var g2 = data[here + 1];
+                var b2 = data[here + 2];
+                var r_squared = (r1 - r2) * (r1 - r2);
+                var g_squared = (g1 - g2) * (g1 - g2);
+                var b_squared = (b1 - b2) * (b1 - b2);
+                var dist = Math.sqrt(r_squared + g_squared + b_squared) | 0;
+                arr[dist] += 1;
+            }
+        }
+    };
+    ColorDistHistogram.prototype.total_entropy = function () {
+        var total = 0;
+        var arr = this.arr;
+        for (var i = 0; i < MAX_DISTANCE; i++) {
+            total += arr[i];
+        }
+        var sum = 0;
+        for (var i = 0; i < MAX_DISTANCE; i++) {
+            var p = (i * arr[i]) / total;
+            if (p == 0)
+                continue;
+            sum += p * (Math.log(p) / Math.LOG2E);
+        }
+        return -sum;
+    };
+    return ColorDistHistogram;
+})();
 function draw_entropy(img_data, out) {
     var data = img_data.data;
     var index = (function () {
@@ -128,33 +147,19 @@ function make_entropy_canvas(img) {
     ctx.putImageData(out, 0, 0, 0, 0, canvas.width, canvas.height);
     return canvas;
 }
-function total_entropy(histo) {
-    var total = 0;
-    for (var i = 0; i < MAX_DISTANCE; i++) {
-        total += histo[i];
-    }
-    var sum = 0;
-    for (var i = 0; i < MAX_DISTANCE; i++) {
-        var p = (i * histo[i]) / total;
-        if (p == 0)
-            continue;
-        sum += p * (Math.log(p) / Math.LOG2E);
-    }
-    return -sum;
-}
 var CroppingControl = (function () {
     function CroppingControl(img_data) {
         this.img_data = img_data;
-        this.histo = new_histogram();
+        this.histo = new ColorDistHistogram();
         this.x = 0;
         this.y = 0;
         this.width = img_data.width;
         this.height = img_data.height;
     }
     CroppingControl.prototype.entropy = function (slice_amount, x, y, width, height) {
-        calculate_histogram(this.histo, this.img_data, x, y, width, height);
-        var result = total_entropy(this.histo);
-        reset_histogram(this.histo);
+        this.histo.calculate(this.img_data, x, y, width, height);
+        var result = this.histo.total_entropy();
+        this.histo.reset();
         return result;
     };
     CroppingControl.prototype.entropy_top = function (slice_amount) {

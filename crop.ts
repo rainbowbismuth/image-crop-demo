@@ -52,52 +52,73 @@ function euphoria(img: HTMLImageElement): HTMLDivElement {
 
 const MAX_DISTANCE: number = 441;
 
-function new_histogram(): Int32Array {
-  return new Uint32Array(MAX_DISTANCE);
-}
-
-function reset_histogram(histo: Int32Array) {
-  for (var i = 0; i < MAX_DISTANCE; i++) {
-    histo[i] = 0;
+class ColorDistHistogram {
+  constructor() {
+    this.arr = new Uint32Array(MAX_DISTANCE);
   }
-}
 
-function calculate_histogram(histo: Int32Array, img_data: ImageData, x: number, y: number, width: number, height: number) {
-  var data = img_data.data;
-
-  var index = (function() {
-    var row_length = img_data.width;
-
-    return function(i: number, j: number): number {
-      return (i + j * row_length) * 4;
-    }
-  })();
-
-  var last_x = x + width - 1;
-  var last_y = y + height - 1;
-
-  for (; y < last_y; y++) {
-    for (; x < last_x; x++) {
-      var here = index(x, y);
-      var r1 = data[here + 0];
-      var g1 = data[here + 1];
-      var b1 = data[here + 2];
-
-      var here = index(x + 1, y);
-      var r2 = data[here + 0];
-      var g2 = data[here + 1];
-      var b2 = data[here + 2];
-
-      var r_squared = (r1 - r2) * (r1 - r2);
-      var g_squared = (g1 - g2) * (g1 - g2);
-      var b_squared = (b1 - b2) * (b1 - b2);
-      var dist = Math.sqrt(r_squared + g_squared + b_squared) | 0;
-
-      histo[dist] += 1;
+  reset() {
+    var arr = this.arr;
+    for (var i = 0; i < MAX_DISTANCE; i++) {
+      arr[i] = 0;
     }
   }
 
-  return histo;
+  calculate(img_data: ImageData, x: number, y: number, width: number, height: number): void {
+    var data = img_data.data;
+    var arr = this.arr;
+
+    var index = (function() {
+      var row_length = img_data.width;
+
+      return function(i: number, j: number): number {
+        return (i + j * row_length) * 4;
+      }
+    })();
+
+    var last_x = x + width - 1;
+    var last_y = y + height - 1;
+
+    for (; y < last_y; y++) {
+      for (; x < last_x; x++) {
+        var here = index(x, y);
+        var r1 = data[here + 0];
+        var g1 = data[here + 1];
+        var b1 = data[here + 2];
+
+        var here = index(x + 1, y);
+        var r2 = data[here + 0];
+        var g2 = data[here + 1];
+        var b2 = data[here + 2];
+
+        var r_squared = (r1 - r2) * (r1 - r2);
+        var g_squared = (g1 - g2) * (g1 - g2);
+        var b_squared = (b1 - b2) * (b1 - b2);
+        var dist = Math.sqrt(r_squared + g_squared + b_squared) | 0;
+
+        arr[dist] += 1;
+      }
+    }
+  }
+
+  total_entropy(): number {
+    var total = 0;
+    var arr = this.arr;
+    for (var i = 0; i < MAX_DISTANCE; i++) {
+      total += arr[i];
+    }
+
+    var sum = 0;
+    for (var i = 0; i < MAX_DISTANCE; i++) {
+      var p = (i * arr[i]) / total;
+      if (p == 0) continue;
+      sum += p * (Math.log(p) / Math.LOG2E);
+    }
+
+    return -sum;
+  }
+
+  public arr: Uint32Array;
 }
 
 function draw_entropy(img_data: ImageData, out: ImageData) {
@@ -158,26 +179,10 @@ function make_entropy_canvas(img: HTMLImageElement): HTMLCanvasElement {
   return canvas;
 }
 
-function total_entropy(histo: Int32Array): number {
-  var total = 0;
-  for (var i = 0; i < MAX_DISTANCE; i++) {
-    total += histo[i];
-  }
-
-  var sum = 0;
-  for (var i = 0; i < MAX_DISTANCE; i++) {
-    var p = (i * histo[i]) / total;
-    if (p == 0) continue;
-    sum += p * (Math.log(p) / Math.LOG2E);
-  }
-
-  return -sum;
-}
-
 class CroppingControl {
   constructor(img_data: ImageData) {
     this.img_data = img_data;
-    this.histo = new_histogram();
+    this.histo = new ColorDistHistogram();
     this.x = 0;
     this.y = 0;
     this.width = img_data.width;
@@ -185,16 +190,16 @@ class CroppingControl {
   }
 
   public img_data: ImageData;
-  private histo: Int32Array;
+  private histo: ColorDistHistogram;
   public x: number;
   public y: number;
   public width: number;
   public height: number;
 
   entropy(slice_amount: number, x: number, y: number, width: number, height: number): number {
-    calculate_histogram(this.histo, this.img_data, x, y, width, height);
-    var result = total_entropy(this.histo);
-    reset_histogram(this.histo)
+    this.histo.calculate(this.img_data, x, y, width, height);
+    var result = this.histo.total_entropy();
+    this.histo.reset();
     return result;
   }
 
