@@ -136,9 +136,9 @@ function draw_entropy_map(img_data, out) {
 function make_entropy_canvas(img) {
     var canvas = document.createElement("canvas");
     var target = 250;
-    var ratio = img.naturalWidth / target;
-    canvas.width = img.naturalWidth / ratio;
-    canvas.height = img.naturalHeight / ratio;
+    var ratio = Math.max(img.naturalWidth, img.naturalHeight) / target;
+    canvas.width = (img.naturalWidth / ratio) | 0;
+    canvas.height = (img.naturalHeight / ratio) | 0;
     var ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     var img_data = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -193,7 +193,7 @@ var draw_entropy_croppedpingControl = (function () {
 function draw_entropy_cropped(img) {
     var canvas = document.createElement("canvas");
     var target = 250;
-    var ratio = img.naturalWidth / target;
+    var ratio = Math.max(img.naturalWidth, img.naturalHeight) / target;
     canvas.width = (img.naturalWidth / ratio) | 0;
     canvas.height = (img.naturalHeight / ratio) | 0;
     var ctx = canvas.getContext("2d");
@@ -201,7 +201,7 @@ function draw_entropy_cropped(img) {
     var img_data = ctx.getImageData(0, 0, canvas.width, canvas.height);
     var draw_entropy_cropped_ctl = new draw_entropy_croppedpingControl(img_data);
     while (draw_entropy_cropped_ctl.height * 16 / 9 > draw_entropy_cropped_ctl.width) {
-        var slice_amount = 5;
+        var slice_amount = 4;
         var top_entropy = draw_entropy_cropped_ctl.entropy_top(slice_amount);
         var bottom_entropy = draw_entropy_cropped_ctl.entropy_bottom(slice_amount);
         if (top_entropy < bottom_entropy) {
@@ -212,7 +212,7 @@ function draw_entropy_cropped(img) {
         }
     }
     while (draw_entropy_cropped_ctl.width * 9 / 16 > draw_entropy_cropped_ctl.height) {
-        var slice_amount = 5;
+        var slice_amount = 4;
         var left_entropy = draw_entropy_cropped_ctl.entropy_left(slice_amount);
         var right_entropy = draw_entropy_cropped_ctl.entropy_right(slice_amount);
         if (left_entropy < right_entropy) {
