@@ -142,6 +142,49 @@ function total_entropy(histo) {
     }
     return -sum;
 }
+var CroppingControl = (function () {
+    function CroppingControl(img_data) {
+        this.img_data = img_data;
+        this.histo = new_histogram();
+        this.x = 0;
+        this.y = 0;
+        this.width = img_data.width;
+        this.height = img_data.height;
+    }
+    CroppingControl.prototype.entropy = function (slice_amount, x, y, width, height) {
+        calculate_histogram(this.histo, this.img_data, x, y, width, height);
+        var result = total_entropy(this.histo);
+        reset_histogram(this.histo);
+        return result;
+    };
+    CroppingControl.prototype.entropy_top = function (slice_amount) {
+        return this.entropy(slice_amount, this.x, this.y, this.width, slice_amount);
+    };
+    CroppingControl.prototype.entropy_bottom = function (slice_amount) {
+        return this.entropy(slice_amount, this.x, this.y + this.height - slice_amount, this.width, slice_amount);
+    };
+    CroppingControl.prototype.entropy_left = function (slice_amount) {
+        return this.entropy(slice_amount, this.x, this.y, slice_amount, this.height);
+    };
+    CroppingControl.prototype.entropy_right = function (slice_amount) {
+        return this.entropy(slice_amount, this.x + this.width - slice_amount, this.y, slice_amount, this.height);
+    };
+    CroppingControl.prototype.slice_top = function (slice_amount) {
+        this.y += slice_amount;
+        this.height -= slice_amount;
+    };
+    CroppingControl.prototype.slice_bottom = function (slice_amount) {
+        this.height -= slice_amount;
+    };
+    CroppingControl.prototype.slice_left = function (slice_amount) {
+        this.x += slice_amount;
+        this.width -= slice_amount;
+    };
+    CroppingControl.prototype.slice_right = function (slice_amount) {
+        this.width -= slice_amount;
+    };
+    return CroppingControl;
+})();
 function crop(img) {
     var canvas = document.createElement("canvas");
     var target = 250;
@@ -151,36 +194,28 @@ function crop(img) {
     var ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     var img_data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    var cur_width = canvas.width;
-    var cur_height = canvas.height;
-    var cur_x = 0;
-    var cur_y = 0;
-    var histo = new_histogram();
-    while (cur_height * 16 / 9 > cur_width) {
+    var crop_ctl = new CroppingControl(img_data);
+    while (crop_ctl.height * 16 / 9 > crop_ctl.width) {
         var slice_amount = 5;
-        calculate_histogram(histo, img_data, cur_x, cur_y, cur_width, slice_amount);
-        var top_entropy = total_entropy(histo);
-        reset_histogram(histo);
-        calculate_histogram(histo, img_data, cur_x, cur_y + cur_height - slice_amount, cur_width, slice_amount);
-        var bottom_entropy = total_entropy(histo);
-        reset_histogram(histo);
+        var top_entropy = crop_ctl.entropy_top(slice_amount);
+        var bottom_entropy = crop_ctl.entropy_bottom(slice_amount);
         if (top_entropy < bottom_entropy) {
-            cur_y += slice_amount;
+            crop_ctl.slice_top(slice_amount);
         }
-        cur_height -= slice_amount;
+        else {
+            crop_ctl.slice_bottom(slice_amount);
+        }
     }
-    while (cur_width * 9 / 16 > cur_height) {
+    while (crop_ctl.width * 9 / 16 > crop_ctl.height) {
         var slice_amount = 5;
-        calculate_histogram(histo, img_data, cur_x, cur_y, slice_amount, cur_height);
-        var left_entropy = total_entropy(histo);
-        reset_histogram(histo);
-        calculate_histogram(histo, img_data, cur_x + cur_width - slice_amount, cur_y, slice_amount, cur_height);
-        var right_entropy = total_entropy(histo);
-        reset_histogram(histo);
+        var left_entropy = crop_ctl.entropy_left(slice_amount);
+        var right_entropy = crop_ctl.entropy_right(slice_amount);
         if (left_entropy < right_entropy) {
-            cur_x += slice_amount;
+            crop_ctl.slice_left(slice_amount);
         }
-        cur_width -= slice_amount;
+        else {
+            crop_ctl.slice_right(slice_amount);
+        }
     }
     var result = document.createElement("canvas");
     if (img.naturalWidth * 9 / 16 > img.naturalHeight) {
@@ -192,7 +227,7 @@ function crop(img) {
         result.width = (result.height * 16 / 9) | 0;
     }
     var resultCtx = result.getContext("2d");
-    resultCtx.drawImage(img, (cur_x * ratio) | 0, (cur_y * ratio) | 0, (cur_width * ratio) | 0, (cur_height * ratio) | 0, 0, 0, result.width, result.height);
+    resultCtx.drawImage(img, (crop_ctl.x * ratio) | 0, (crop_ctl.y * ratio) | 0, (crop_ctl.width * ratio) | 0, (crop_ctl.height * ratio) | 0, 0, 0, result.width, result.height);
     result.style.maxWidth = 272 + 'px';
     result.style.height = 'auto';
     return result;
