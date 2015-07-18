@@ -1,11 +1,11 @@
-function make_both(source: string) {
+function draw_all_images(source: string) {
   var image: HTMLImageElement = document.createElement("img");
   image.crossOrigin = 'anonymous';
   image.src = source;
   image.onload = function() {
     var entropy: HTMLCanvasElement = make_entropy_canvas(image);
-    var cropped: HTMLCanvasElement = crop(image);
-    var div: HTMLDivElement = euphoria(image);
+    var draw_entropy_croppedped: HTMLCanvasElement = draw_entropy_cropped(image);
+    var div: HTMLDivElement = draw_euphoria_style(image);
 
     image.style.width = window.innerHeight * 4 / 9 + 'px';
     image.style.height = 'auto';
@@ -13,12 +13,12 @@ function make_both(source: string) {
     document.body.appendChild(div);
     document.body.appendChild(image);
     document.body.appendChild(entropy);
-    document.body.appendChild(cropped);
+    document.body.appendChild(draw_entropy_croppedped);
     document.body.appendChild(document.createElement("br"));
   }
 }
 
-function euphoria(img: HTMLImageElement): HTMLDivElement {
+function draw_euphoria_style(img: HTMLImageElement): HTMLDivElement {
   img = <HTMLImageElement>img.cloneNode(false);
 
   var div: HTMLDivElement = document.createElement("div");
@@ -121,7 +121,7 @@ class ColorDistHistogram {
   public arr: Uint32Array;
 }
 
-function draw_entropy(img_data: ImageData, out: ImageData) {
+function draw_entropy_map(img_data: ImageData, out: ImageData) {
   var data = img_data.data;
 
   var index = (function() {
@@ -174,12 +174,12 @@ function make_entropy_canvas(img: HTMLImageElement): HTMLCanvasElement {
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   var img_data = ctx.getImageData(0, 0, canvas.width, canvas.height);
   var out = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  draw_entropy(img_data, out);
+  draw_entropy_map(img_data, out);
   ctx.putImageData(out, 0, 0, 0, 0, canvas.width, canvas.height);
   return canvas;
 }
 
-class CroppingControl {
+class draw_entropy_croppedpingControl {
   constructor(img_data: ImageData) {
     this.img_data = img_data;
     this.histo = new ColorDistHistogram();
@@ -258,7 +258,7 @@ class CroppingControl {
   }
 }
 
-function crop(img: HTMLImageElement): HTMLCanvasElement {
+function draw_entropy_cropped(img: HTMLImageElement): HTMLCanvasElement {
   var canvas: HTMLCanvasElement = document.createElement("canvas");
 
   var target = 250; //window.screen.width / 8;
@@ -270,31 +270,31 @@ function crop(img: HTMLImageElement): HTMLCanvasElement {
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   var img_data: ImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  var crop_ctl = new CroppingControl(img_data);
+  var draw_entropy_cropped_ctl = new draw_entropy_croppedpingControl(img_data);
 
-  while (crop_ctl.height * 16 / 9 > crop_ctl.width) {
+  while (draw_entropy_cropped_ctl.height * 16 / 9 > draw_entropy_cropped_ctl.width) {
     var slice_amount = 5
 
-    var top_entropy = crop_ctl.entropy_top(slice_amount);
-    var bottom_entropy = crop_ctl.entropy_bottom(slice_amount);
+    var top_entropy = draw_entropy_cropped_ctl.entropy_top(slice_amount);
+    var bottom_entropy = draw_entropy_cropped_ctl.entropy_bottom(slice_amount);
 
     if (top_entropy < bottom_entropy) {
-      crop_ctl.slice_top(slice_amount);
+      draw_entropy_cropped_ctl.slice_top(slice_amount);
     } else {
-      crop_ctl.slice_bottom(slice_amount);
+      draw_entropy_cropped_ctl.slice_bottom(slice_amount);
     }
   }
 
-  while (crop_ctl.width * 9 / 16 > crop_ctl.height) {
+  while (draw_entropy_cropped_ctl.width * 9 / 16 > draw_entropy_cropped_ctl.height) {
     var slice_amount = 5
 
-    var left_entropy = crop_ctl.entropy_left(slice_amount);
-    var right_entropy = crop_ctl.entropy_right(slice_amount);
+    var left_entropy = draw_entropy_cropped_ctl.entropy_left(slice_amount);
+    var right_entropy = draw_entropy_cropped_ctl.entropy_right(slice_amount);
 
     if (left_entropy < right_entropy) {
-      crop_ctl.slice_left(slice_amount);
+      draw_entropy_cropped_ctl.slice_left(slice_amount);
     } else {
-      crop_ctl.slice_right(slice_amount);
+      draw_entropy_cropped_ctl.slice_right(slice_amount);
     }
   }
 
@@ -310,10 +310,10 @@ function crop(img: HTMLImageElement): HTMLCanvasElement {
   var resultCtx: CanvasRenderingContext2D = result.getContext("2d");
   resultCtx.drawImage(
     img,
-    (crop_ctl.x * ratio) | 0,
-    (crop_ctl.y * ratio) | 0,
-    (crop_ctl.width * ratio) | 0,
-    (crop_ctl.height * ratio) | 0,
+    (draw_entropy_cropped_ctl.x * ratio) | 0,
+    (draw_entropy_cropped_ctl.y * ratio) | 0,
+    (draw_entropy_cropped_ctl.width * ratio) | 0,
+    (draw_entropy_cropped_ctl.height * ratio) | 0,
     0, 0, result.width, result.height);
 
   result.style.maxWidth = 272 + 'px';
@@ -321,14 +321,14 @@ function crop(img: HTMLImageElement): HTMLCanvasElement {
   return result;
 }
 
-make_both('./sample1.jpg');
-make_both('./sample2.jpg');
-make_both('./sample3.jpg');
-make_both('./sample4.jpg');
-make_both('./sample5.jpg');
-make_both('./sample6.jpg');
-make_both('./sample7.jpg');
-make_both('./sample8.png');
-make_both('./huge_sample1.jpg');
-make_both('./huge_sample2.jpg');
-make_both('./huge_sample3.jpg');
+draw_all_images('./sample1.jpg');
+draw_all_images('./sample2.jpg');
+draw_all_images('./sample3.jpg');
+draw_all_images('./sample4.jpg');
+draw_all_images('./sample5.jpg');
+draw_all_images('./sample6.jpg');
+draw_all_images('./sample7.jpg');
+draw_all_images('./sample8.png');
+draw_all_images('./huge_sample1.jpg');
+draw_all_images('./huge_sample2.jpg');
+draw_all_images('./huge_sample3.jpg');
