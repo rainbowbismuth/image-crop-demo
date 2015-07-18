@@ -179,7 +179,7 @@ function make_entropy_canvas(img: HTMLImageElement): HTMLCanvasElement {
   return canvas;
 }
 
-class draw_entropy_croppedpingControl {
+class CroppingControl {
   constructor(img_data: ImageData) {
     this.img_data = img_data;
     this.histo = new ColorDistHistogram();
@@ -270,31 +270,31 @@ function draw_entropy_cropped(img: HTMLImageElement): HTMLCanvasElement {
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   var img_data: ImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-  var draw_entropy_cropped_ctl = new draw_entropy_croppedpingControl(img_data);
+  var cropping_ctl = new CroppingControl(img_data);
 
-  while (draw_entropy_cropped_ctl.height * 16 / 9 > draw_entropy_cropped_ctl.width) {
+  while (cropping_ctl.height * 16 / 9 > cropping_ctl.width) {
     var slice_amount = 4
 
-    var top_entropy = draw_entropy_cropped_ctl.entropy_top(slice_amount);
-    var bottom_entropy = draw_entropy_cropped_ctl.entropy_bottom(slice_amount);
+    var top_entropy = cropping_ctl.entropy_top(slice_amount);
+    var bottom_entropy = cropping_ctl.entropy_bottom(slice_amount);
 
     if (top_entropy < bottom_entropy) {
-      draw_entropy_cropped_ctl.slice_top(slice_amount);
+      cropping_ctl.slice_top(slice_amount);
     } else {
-      draw_entropy_cropped_ctl.slice_bottom(slice_amount);
+      cropping_ctl.slice_bottom(slice_amount);
     }
   }
 
-  while (draw_entropy_cropped_ctl.width * 9 / 16 > draw_entropy_cropped_ctl.height) {
+  while (cropping_ctl.width * 9 / 16 > cropping_ctl.height) {
     var slice_amount = 4
 
-    var left_entropy = draw_entropy_cropped_ctl.entropy_left(slice_amount);
-    var right_entropy = draw_entropy_cropped_ctl.entropy_right(slice_amount);
+    var left_entropy = cropping_ctl.entropy_left(slice_amount);
+    var right_entropy = cropping_ctl.entropy_right(slice_amount);
 
     if (left_entropy < right_entropy) {
-      draw_entropy_cropped_ctl.slice_left(slice_amount);
+      cropping_ctl.slice_left(slice_amount);
     } else {
-      draw_entropy_cropped_ctl.slice_right(slice_amount);
+      cropping_ctl.slice_right(slice_amount);
     }
   }
 
@@ -310,10 +310,10 @@ function draw_entropy_cropped(img: HTMLImageElement): HTMLCanvasElement {
   var resultCtx: CanvasRenderingContext2D = result.getContext("2d");
   resultCtx.drawImage(
     img,
-    (draw_entropy_cropped_ctl.x * ratio) | 0,
-    (draw_entropy_cropped_ctl.y * ratio) | 0,
-    (draw_entropy_cropped_ctl.width * ratio) | 0,
-    (draw_entropy_cropped_ctl.height * ratio) | 0,
+    (cropping_ctl.x * ratio) | 0,
+    (cropping_ctl.y * ratio) | 0,
+    (cropping_ctl.width * ratio) | 0,
+    (cropping_ctl.height * ratio) | 0,
     0, 0, result.width, result.height);
 
   result.style.maxWidth = 272 + 'px';
